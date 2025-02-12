@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  idealista-bot:
+    container_name: idealista-bot
+    build: .
+    restart: always
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
