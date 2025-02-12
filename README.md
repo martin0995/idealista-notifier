@@ -20,6 +20,8 @@ idealista-notifier/
 │   ├── scraper.py          # Scrapes Idealista & sends Telegram notifications
 │── .env                    # Stores API keys (excluded from Git)
 │── requirements.txt        # Python dependencies
+│── Dockerfile              # Container configuration
+│── docker-compose.yml      # Deployment configuration
 │── README.md               # Project documentation
 ```
 
@@ -63,9 +65,60 @@ TELEGRAM_CHAT_ID=your_chat_id_here
 python3 src/scraper.py
 ```
 
-## Deployment Options
+## Docker Setup
 
-You can run this script locally or deploy it on:
+### Run Locally with Docker
 
-- A cloud server (AWS, DigitalOcean, Railway.app)
-- Docker
+To run the bot using Docker:
+
+```bash
+docker build -t idealista-bot .
+docker run -d --restart unless-stopped --name idealista-bot idealista-bot
+```
+
+### Run with Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+This ensures the bot persists data and auto-restarts if it stops.
+
+## Deploy to Railway.app
+
+1. Install Railway CLI
+
+```bash
+curl -fsSL https://railway.app/install.sh | sh
+railway login
+```
+
+2. Link Project & Deploy
+
+```bash
+railway init
+railway up
+```
+
+3. Set Environment Variables
+
+```bash
+railway variables --set "TELEGRAM_BOT_TOKEN=your_bot_token_here" --set "TELEGRAM_CHAT_ID=your_chat_id_here"
+```
+
+4. Check Logs & Status
+
+```bash
+railway logs -f
+railway status
+```
+
+The bot will now run 24/7, even if you turn off your computer.
+
+## Telegram Bot Link
+
+Try it out: https://t.me/Idealista_Notifier_Bot
+
+## Contributing
+
+Feel free to open issues or submit a pull request to improve the project!
