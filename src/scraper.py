@@ -6,6 +6,9 @@ import os
 from dotenv import load_dotenv
 from telegram import Bot
 import asyncio
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="|%(levelname)s| %(asctime)s - %(message)s")
 
 # Load environment variables
 load_dotenv()
@@ -40,7 +43,9 @@ def send_message_sync(message):
     asyncio.run(send_telegram_message(message))
 
 def scrape_idealista():
+    logging.debug(f"Scraping Idealista...")
     print("Scraping Idealista...")
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
@@ -51,6 +56,7 @@ def scrape_idealista():
     response = session.get(IDEALISTA_URL)
 
     if response.status_code != 200:
+        logging.debug(f"Error fetching page! Status code: {response.status_code}")
         print("Error fetching page! Status code:", response.status_code)
         return []
 
@@ -104,6 +110,7 @@ def scrape_idealista():
                 send_message_sync(message)
 
         except Exception as e:
+            logging.debug(f"Error parsing listing: {e}")
             print("Error parsing listing:", e)
 
     save_seen_listings(seen_listings)
@@ -113,7 +120,9 @@ if __name__ == "__main__":
     while True:
         new_listings = scrape_idealista()
         if new_listings:
+            logging.debug(f"Found {len(new_listings)} new listings!")
             print(f"Found {len(new_listings)} new listings!")
         else:
+            logging.debug(f"No new listings.")
             print("No new listings.")
         time.sleep(60)  # Wait 1 minutes before scraping again
