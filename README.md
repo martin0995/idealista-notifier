@@ -1,0 +1,1 @@
+# idealista-notifier
