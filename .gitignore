@@ -1,1 +1,5 @@
+# ENV variables
 .env
+
+# Saved data
+seen_listings.json
