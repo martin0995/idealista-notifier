@@ -22,7 +22,7 @@ IDEALISTA_URL = "https://www.idealista.com/alquiler-viviendas/barcelona-barcelon
 EXCLUDED_AREAS = ["Raval", "Gòtic", "Gotico", "Gótico", "Gotic"]
 
 # Track seen listings to avoid duplicates
-SEEN_LISTINGS_FILE = "seen_listings.json"
+SEEN_LISTINGS_FILE = "/app/data/seen_listings.json"
 
 def load_seen_listings():
     try:
