@@ -3,3 +3,4 @@ beautifulsoup4==4.12.2
 python-telegram-bot==20.3
 python-dotenv==1.0.0
 asyncio==3.4.3
+fake_useragent==2.0.3

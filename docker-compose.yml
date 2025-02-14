@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   idealista-bot:
     container_name: idealista-bot

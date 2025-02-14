@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from telegram import Bot
 import asyncio
 import logging
+from fake_useragent import UserAgent
+import random
 
 logging.basicConfig(level=logging.DEBUG, format="|%(levelname)s| %(asctime)s - %(message)s")
 
@@ -21,8 +23,14 @@ IDEALISTA_URL = "https://www.idealista.com/alquiler-viviendas/barcelona-barcelon
 # Neighborhoods to exclude
 EXCLUDED_AREAS = ["Raval", "Gòtic", "Gotico", "Gótico", "Gotic"]
 
+# Keywords to filter out
+EXCLUDED_TERMS = ["Alquiler de temporada", "alquiler temporal", "estancia corta"]
+
 # Track seen listings to avoid duplicates
 SEEN_LISTINGS_FILE = "/app/data/seen_listings.json"
+
+# Track if an error has already been notified
+ERROR_LOG_FILE = "/app/data/error_log.json"
 
 def load_seen_listings():
     try:
@@ -42,18 +50,56 @@ async def send_telegram_message(message):
 def send_message_sync(message):
     asyncio.run(send_telegram_message(message))
 
+# Error Handling:
+def load_error_status():
+    """Load the last recorded error status."""
+    try:
+        with open(ERROR_LOG_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"last_error": None}
+
+def save_error_status(error_code):
+    """Save the last recorded error status."""
+    with open(ERROR_LOG_FILE, "w") as f:
+        json.dump({"last_error": error_code}, f)
+
+# Main logic:
 def scrape_idealista():
     logging.debug(f"Scraping Idealista...")
     print("Scraping Idealista...")
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent": UserAgent().random,
+        "Accept-Language": "es-ES,es;q=0.9",
         "Referer": "https://www.google.com/",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
     }
+
     session = requests.Session()
     session.headers.update(headers)
     response = session.get(IDEALISTA_URL)
+
+    # Load last error status
+    error_status = load_error_status()
+
+    if response.status_code == 403:
+        logging.debug(f"⚠️ Error 403 - Access Forbidden!")
+        print("⚠️ Error 403 - Access Forbidden!")
+        
+        # Notify Telegram only if this error hasn't been sent yet
+        if error_status["last_error"] != 403:
+            message = "🚨 *Error 403 Detected!*\nIdealista has blocked access."
+            asyncio.run(send_telegram_message(message))
+            save_error_status(403)  # Save the error state
+
+        return []  # Stop scraping if blocked
+    
+    # If the response is successful, reset error log
+    if response.status_code == 200 and error_status["last_error"] == 403:
+        save_error_status(None)  # Clear error status
 
     if response.status_code != 200:
         logging.debug(f"Error fetching page! Status code: {response.status_code}")
@@ -88,6 +134,10 @@ def scrape_idealista():
 
             # Skip if the listing is from an excluded area
             if any(area.lower() in title.lower() or area.lower() in description.lower() for area in EXCLUDED_AREAS):
+                continue
+
+            # Skip listing if description contains any excluded term
+            if any(term.lower() in description.lower() for term in EXCLUDED_TERMS):
                 continue
 
             # Check if it's a new listing
@@ -125,4 +175,4 @@ if __name__ == "__main__":
         else:
             logging.debug(f"No new listings.")
             print("No new listings.")
-        time.sleep(60)  # Wait 1 minutes before scraping again
+        time.sleep(random.randint(60, 120))
