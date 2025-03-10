@@ -17,14 +17,20 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+# Max price
+MAX_PRICE = 1400
+
 # Define the search URL with filters (modify as needed)
-IDEALISTA_URL = "https://www.idealista.com/alquiler-viviendas/barcelona-barcelona/con-precio-hasta_1400,metros-cuadrados-mas-de_40,publicado_ultimas-24-horas,alquiler-de-larga-temporada/?ordenado-por=fecha-publicacion-desc"
+IDEALISTA_URL = f"https://www.idealista.com/alquiler-viviendas/barcelona-barcelona/con-precio-hasta_{MAX_PRICE},metros-cuadrados-mas-de_40,publicado_ultimas-24-horas,alquiler-de-larga-temporada/?ordenado-por=fecha-publicacion-desc"
 
 # Neighborhoods to exclude
-EXCLUDED_AREAS = ["Raval", "Gòtic", "Gotico", "Gótico", "Gotic"]
+EXCLUDED_AREAS = ["Raval", "Gòtic", "Gotico", "Gótico", "Gotic", "Barceloneta"]
 
 # Keywords to filter out
 EXCLUDED_TERMS = ["Alquiler de temporada", "alquiler temporal", "estancia corta"]
+
+# Exclude unwanted floors
+EXCLUDED_FLOORS = ["Entreplanta", "Planta 1ᵃ", "Bajo"]
 
 # Track seen listings to avoid duplicates
 SEEN_LISTINGS_FILE = "/app/data/seen_listings.json"
@@ -132,6 +138,14 @@ def scrape_idealista():
             size = details_elements[1].get_text(strip=True) if len(details_elements) > 1 else "Not available"
             floor = details_elements[2].get_text(strip=True) if len(details_elements) > 2 else "Not available"
 
+            # Highlight Atico listings
+            ATICO_TERMS = ["Atico", "Ático", "Atic"]
+            is_atico = any(term.lower() in title.lower() or term.lower() in description.lower() for term in ATICO_TERMS)
+
+            # Explude low floors
+            if any(floor_term.lower() in floor.lower() for floor_term in EXCLUDED_FLOORS):
+                continue
+
             # Skip if the listing is from an excluded area
             if any(area.lower() in title.lower() or area.lower() in description.lower() for area in EXCLUDED_AREAS):
                 continue
@@ -150,7 +164,11 @@ def scrape_idealista():
                 seen_listings.add(link)
 
                 # Send Telegram notification
-                message = f"""🏡 *New Apartment Listing!*\n
+                message_title = "🏡 *New Apartment Listing!*"
+                if is_atico:
+                    message_title = "🚨 *ATIC ALERT!* 🚨"
+
+                message = f"""{message_title}\n
 📍 {title}\n
 💰 {price}
 🛏️ {rooms}
