@@ -35,6 +35,9 @@ EXCLUDED_FLOORS = ["Entreplanta", "Planta 1ᵃ", "Bajo"]
 # Track seen listings to avoid duplicates
 SEEN_LISTINGS_FILE = "/app/data/seen_listings.json"
 
+# Max listing saved
+MAX_LISTINGS = 100
+
 # Track if an error has already been notified
 ERROR_LOG_FILE = "/app/data/error_log.json"
 
@@ -46,8 +49,10 @@ def load_seen_listings():
         return set()
 
 def save_seen_listings(seen_listings):
+    """Limit the number of stored listings to prevent file bloat"""
+    seen_listings = list(seen_listings)[-MAX_LISTINGS:]  # Keep only the last X listings
     with open(SEEN_LISTINGS_FILE, "w") as f:
-        json.dump(list(seen_listings), f)
+        json.dump(seen_listings, f)
 
 async def send_telegram_message(message):
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
