@@ -50,6 +50,7 @@ def load_seen_listings():
         return deque(maxlen=MAX_LISTINGS)
 
 def save_seen_listings(seen_listings):
+    os.makedirs(os.path.dirname(SEEN_LISTINGS_FILE), exist_ok=True)
     with open(SEEN_LISTINGS_FILE, "w") as f:
         json.dump(list(seen_listings), f)
 
@@ -168,7 +169,7 @@ def scrape_idealista():
 
             # Check if it's a new listing
             if link not in seen_set:
-                listings.append({...})
+                listings.append(link)
                 seen_listings.append(link)
                 seen_set.add(link)
 
