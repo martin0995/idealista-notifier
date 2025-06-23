@@ -9,6 +9,7 @@ import asyncio
 import logging
 from fake_useragent import UserAgent
 import random
+from collections import deque
 
 logging.basicConfig(level=logging.DEBUG, format="|%(levelname)s| %(asctime)s - %(message)s")
 
@@ -18,16 +19,16 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Max price
-MAX_PRICE = 1400
+MAX_PRICE = 1200
 
 # Define the search URL with filters (modify as needed)
 IDEALISTA_URL = f"https://www.idealista.com/alquiler-viviendas/barcelona-barcelona/con-precio-hasta_{MAX_PRICE},metros-cuadrados-mas-de_40,publicado_ultimas-24-horas,alquiler-de-larga-temporada/?ordenado-por=fecha-publicacion-desc"
 
 # Neighborhoods to exclude
-EXCLUDED_AREAS = ["Raval", "Gòtic", "Gotico", "Gótico", "Gotic", "Barceloneta"]
+EXCLUDED_AREAS = ["Raval", "Gòtic", "Gotico", "Gótico", "Gotic", "Barceloneta", "Estudio"]
 
 # Keywords to filter out
-EXCLUDED_TERMS = ["Alquiler de temporada", "alquiler temporal", "estancia corta"]
+EXCLUDED_TERMS = ["Alquiler de temporada", "alquiler temporal", "estancia corta", "estudio"]
 
 # Exclude unwanted floors
 EXCLUDED_FLOORS = ["Entreplanta", "Planta 1ᵃ", "Bajo"]
@@ -44,15 +45,13 @@ ERROR_LOG_FILE = "/app/data/error_log.json"
 def load_seen_listings():
     try:
         with open(SEEN_LISTINGS_FILE, "r") as f:
-            return set(json.load(f))
+            return deque(json.load(f), maxlen=MAX_LISTINGS)
     except (FileNotFoundError, json.JSONDecodeError):
-        return set()
+        return deque(maxlen=MAX_LISTINGS)
 
 def save_seen_listings(seen_listings):
-    """Limit the number of stored listings to prevent file bloat"""
-    seen_listings = list(seen_listings)[-MAX_LISTINGS:]  # Keep only the last X listings
     with open(SEEN_LISTINGS_FILE, "w") as f:
-        json.dump(seen_listings, f)
+        json.dump(list(seen_listings), f)
 
 async def send_telegram_message(message):
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -120,6 +119,7 @@ def scrape_idealista():
     soup = BeautifulSoup(response.text, "html.parser")
     listings = []
     seen_listings = load_seen_listings()
+    seen_set = set(seen_listings)
 
     # Extract each listing
     for listing in soup.find_all("article", class_="item" if "item" in response.text else "listing-item"):  # Adjust class if needed
@@ -151,6 +151,10 @@ def scrape_idealista():
             if any(floor_term.lower() in floor.lower() for floor_term in EXCLUDED_FLOORS):
                 continue
 
+            # Explude low floors (sometimes the floor is extracted as the size)
+            if any(floor_term.lower() in size.lower() for floor_term in EXCLUDED_FLOORS):
+                continue
+
             # Skip if the listing is from an excluded area
             if any(area.lower() in title.lower() or area.lower() in description.lower() for area in EXCLUDED_AREAS):
                 continue
@@ -160,13 +164,10 @@ def scrape_idealista():
                 continue
 
             # Check if it's a new listing
-            if link not in seen_listings:
-                listings.append({
-                    "title": title,
-                    "link": link,
-                    "description": description,
-                })
-                seen_listings.add(link)
+            if link not in seen_set:
+                listings.append({...})
+                seen_listings.append(link)
+                seen_set.add(link)
 
                 # Send Telegram notification
                 message_title = "🏡 *New Apartment Listing!*"
