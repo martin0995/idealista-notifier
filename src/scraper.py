@@ -101,7 +101,7 @@ def scrape_idealista():
         print("⚠️ Error 403 - Access Forbidden!")
         
         # Notify Telegram only if this error hasn't been sent yet
-        if error_status["last_error"] != 403:
+        if error_status.get("last_error") != 403:
             message = "🚨 *Error 403 Detected!*\nIdealista has blocked access."
             asyncio.run(send_telegram_message(message))
             save_error_status(403)  # Save the error state
@@ -109,7 +109,7 @@ def scrape_idealista():
         return []  # Stop scraping if blocked
     
     # If the response is successful, reset error log
-    if response.status_code == 200 and error_status["last_error"] == 403:
+    if response.status_code == 200 and error_status.get("last_error") == 403:
         save_error_status(None)  # Clear error status
 
     if response.status_code != 200:
