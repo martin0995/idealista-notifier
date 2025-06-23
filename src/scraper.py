@@ -62,10 +62,10 @@ def send_message_sync(message):
 
 # Error Handling:
 def load_error_status():
-    """Load the last recorded error status."""
     try:
         with open(ERROR_LOG_FILE, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+            return data if isinstance(data, dict) else {"last_error": None}
     except (FileNotFoundError, json.JSONDecodeError):
         return {"last_error": None}
 
@@ -82,11 +82,13 @@ def scrape_idealista():
 
     headers = {
         "User-Agent": UserAgent().random,
-        "Accept-Language": "es-ES,es;q=0.9",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
         "Referer": "https://www.google.com/",
         "DNT": "1",
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
     }
 
     session = requests.Session()
@@ -193,11 +195,16 @@ def scrape_idealista():
 
 if __name__ == "__main__":
     while True:
-        new_listings = scrape_idealista()
-        if new_listings:
-            logging.debug(f"Found {len(new_listings)} new listings!")
-            print(f"Found {len(new_listings)} new listings!")
-        else:
-            logging.debug(f"No new listings.")
-            print("No new listings.")
+        try:
+            new_listings = scrape_idealista()
+            if new_listings:
+                logging.debug(f"Found {len(new_listings)} new listings!")
+                print(f"Found {len(new_listings)} new listings!")
+            else:
+                logging.debug(f"No new listings.")
+                print("No new listings.")
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            print(f"Unexpected error: {e}")
+        
         time.sleep(random.randint(60, 120))
