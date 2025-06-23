@@ -71,8 +71,9 @@ def load_error_status():
 
 def save_error_status(error_code):
     """Save the last recorded error status."""
+    os.makedirs(os.path.dirname(ERROR_LOG_FILE), exist_ok=True)
     with open(ERROR_LOG_FILE, "w") as f:
-        json.dump({"last_error": error_code}, f)
+        json.dump({"error": error_code}, f)
 
 # Main logic:
 def scrape_idealista():
